@@ -2,7 +2,7 @@ from django.utils.encoding import python_2_unicode_compatible
 
 from allauth.socialaccount import app_settings
 from allauth.account.models import EmailAddress
-
+from django.contrib.sites.models import Site
 from ..models import SocialApp, SocialAccount, SocialLogin
 from ..adapter import get_adapter
 
@@ -40,9 +40,14 @@ class Provider(object):
     def get_settings(self):
         return app_settings.PROVIDERS.get(self.id, {})
 
+    def get_domain_uid(self, uid):
+        site = Site.objects.get_current()
+        domain_uid = '%s-%s' % (site.domain, uid)
+        return domain_uid
+
     def sociallogin_from_response(self, request, response):
         adapter = get_adapter()
-        uid = self.extract_uid(response)
+        uid = self.get_domain_uid(self.extract_uid(response))
         extra_data = self.extract_extra_data(response)
         common_fields = self.extract_common_fields(response)
         socialaccount = SocialAccount(extra_data=extra_data,

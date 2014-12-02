@@ -61,6 +61,12 @@ def _login_social_account(request, sociallogin):
 
 
 def render_authentication_error(request, extra_context={}):
+
+    try:
+        get_adapter().render_authentication_error(request)
+    except ImmediateHttpResponse as e:
+        return e.response
+
     return render_to_response(
         "socialaccount/authentication_error.html",
         extra_context, context_instance=RequestContext(request))

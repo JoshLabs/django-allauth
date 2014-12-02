@@ -6,6 +6,7 @@ from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
 from django.utils import timezone
+from allauth.socialaccount.adapter import get_adapter
 
 from allauth.utils import build_absolute_uri
 from allauth.account import app_settings
@@ -90,6 +91,12 @@ class OAuth2CallbackView(OAuth2View):
         if 'error' in request.GET or 'code' not in request.GET:
             # TODO: Distinguish cancel from error
             return render_authentication_error(request)
+
+        #Added for custom calback redirect.
+        callback_url = get_adapter().get_callback_view_uri()
+        if callback_url and request.GET.get('process','').lower()=='import':
+            return HttpResponseRedirect(callback_url+'?code='+request.GET['code'])
+
         app = self.adapter.get_provider().get_app(self.request)
         client = self.get_client(request, app)
         try:

@@ -55,7 +55,10 @@ class OAuth2View(object):
         return view
 
     def get_client(self, request, app):
-        callback_url = reverse(self.adapter.provider_id + "_callback")
+        if request.GET.get('process','').strip() == 'import':
+            callback_url = get_adapter().get_import_callback_url()
+        else:
+            callback_url = reverse(self.adapter.provider_id + "_callback")
         protocol = (self.adapter.redirect_uri_protocol
                     or app_settings.DEFAULT_HTTP_PROTOCOL)
         callback_url = build_absolute_uri(
@@ -91,11 +94,6 @@ class OAuth2CallbackView(OAuth2View):
         if 'error' in request.GET or 'code' not in request.GET:
             # TODO: Distinguish cancel from error
             return render_authentication_error(request)
-
-        #Added for custom calback redirect.
-        callback_url = get_adapter().get_callback_view_uri()
-        if callback_url and request.GET.get('process','').lower()=='import':
-            return HttpResponseRedirect(callback_url+'?code='+request.GET['code'])
 
         app = self.adapter.get_provider().get_app(self.request)
         client = self.get_client(request, app)

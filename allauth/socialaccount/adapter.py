@@ -145,6 +145,18 @@ class DefaultSocialAccountAdapter(object):
         """
         return get_account_adapter().is_open_for_signup(request)
 
+    def render_authentication_error(self, request):
+        """
+        For Custom error response.
+        """
+        pass
+
+    def get_import_callback_url(self):
+        """
+        For custom callback view in case of process=import
+        """
+        pass
+
 
 def get_adapter():
     return import_attribute(app_settings.ADAPTER)()

@@ -1,5 +1,7 @@
 class AppSettings(object):
 
+    DEFAULT_AUTHENTICATION_BACKEND = 'allauth.account.auth_backends.AuthenticationBackend'
+
     class AuthenticationMethod:
         USERNAME = 'username'
         EMAIL = 'email'
@@ -92,6 +94,14 @@ class AppSettings(object):
         elif ret is False:
             ret = self.EmailVerificationMethod.OPTIONAL
         return ret
+
+    @property
+    def ALLAUTH_AUTHENTICATION_BACKEND(self):
+        """
+        Authentication backend to use for AllAuth
+        """
+        from django.conf import settings
+        return getattr(settings, 'ALLAUTH_AUTHENTICATION_BACKEND', self.DEFAULT_AUTHENTICATION_BACKEND)
 
     @property
     def AUTHENTICATION_METHOD(self):

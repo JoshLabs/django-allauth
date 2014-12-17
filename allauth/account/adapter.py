@@ -266,7 +266,7 @@ class DefaultAccountAdapter(object):
         # authentication backend
         if not hasattr(user, 'backend'):
             user.backend \
-                = "allauth.account.auth_backends.AuthenticationBackend"
+                = app_settings.ALLAUTH_AUTHENTICATION_BACKEND
         login(request, user)
 
     def confirm_email(self, request, email_address):

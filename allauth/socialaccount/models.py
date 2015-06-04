@@ -287,7 +287,11 @@ class SocialLogin(object):
         state = cls.state_from_request(request)
         verifier = get_random_string()
         request.session['socialaccount_state'] = (state, verifier)
-        return verifier
+        # Append subdomain in state
+        return '{random_data}@{domain}'.format(
+            random_data=verifier,
+            domain=Site.objects.get_current()
+        )
 
     @classmethod
     def unstash_state(cls, request):

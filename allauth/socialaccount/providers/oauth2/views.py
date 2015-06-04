@@ -55,10 +55,15 @@ class OAuth2View(object):
         return view
 
     def get_client(self, request, app):
-        if request.GET.get('process','').strip() == 'import':
-            callback_url = get_adapter().get_import_callback_url()
+        adapter = get_adapter()
+        if request.GET.get('process', '').strip() == 'import':
+            callback_url = adapter.get_import_callback_url()
         else:
-            callback_url = reverse(self.adapter.provider_id + "_callback")
+            # If adapter has it's own callback url, use that.
+            if hasattr(adapter, 'get_login_callback_url'):
+                callback_url = adapter.get_login_callback_url(request, self.adapter.get_provider())
+            else:
+                callback_url = reverse(self.adapter.provider_id + "_callback")
         protocol = (self.adapter.redirect_uri_protocol
                     or app_settings.DEFAULT_HTTP_PROTOCOL)
         callback_url = build_absolute_uri(

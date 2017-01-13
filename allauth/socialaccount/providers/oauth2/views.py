@@ -49,7 +49,7 @@ class OAuth2Adapter(object):
         adapter = get_adapter(request)
 
         if request.GET.get('process', '').strip() == 'import':
-            callback_url = adapter.get_import_callback_url(request, app)
+            callback_url = adapter.get_import_callback_url()
         else:
             # If adapter has it's own callback url, use that.
             if hasattr(adapter, 'get_login_callback_url'):

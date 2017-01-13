@@ -17,6 +17,7 @@ from allauth.socialaccount.providers.oauth2.client import (OAuth2Client,
                                                            OAuth2Error)
 from allauth.socialaccount.helpers import complete_social_login
 from allauth.socialaccount.models import SocialToken, SocialLogin
+from allauth.socialaccount.adapter import get_adapter
 from allauth.utils import get_request_param
 from ..base import AuthAction, AuthError
 
@@ -45,12 +46,14 @@ class OAuth2Adapter(object):
 
     def get_callback_url(self, request, app):
 
+        adapter = get_adapter(request)
+
         if request.GET.get('process', '').strip() == 'import':
-            callback_url = self.get_import_callback_url(request, app)
+            callback_url = adapter.get_import_callback_url(request, app)
         else:
             # If adapter has it's own callback url, use that.
-            if hasattr(self, 'get_login_callback_url'):
-                callback_url = self.get_login_callback_url(request, self.get_provider())
+            if hasattr(adapter, 'get_login_callback_url'):
+                callback_url = adapter.get_login_callback_url(request, self.get_provider())
             else:
                 callback_url = reverse(self.provider_id + "_callback")
         protocol = self.redirect_uri_protocol

@@ -13,20 +13,34 @@ class FlickrAccount(ProviderAccount):
 
     def to_str(self):
         dflt = super(FlickrAccount, self).to_str()
+
+        # Try to use name if it exists. If there is no name, the Flickr API
+        # returns an empty stirng.
         name = self.account.extra_data \
-            .get('person').get('realname').get('_content', dflt)
-        return name
+            .get('person').get('realname').get('_content', None)
+        if name:
+            return name
+
+        # Default to username if name does not exist.
+        return self.account.extra_data \
+            .get('person').get('username').get('_content', dflt)
 
 
 class FlickrProvider(OAuthProvider):
     id = 'flickr'
     name = 'Flickr'
-    package = 'allauth.socialaccount.providers.flickr'
     account_class = FlickrAccount
 
     def get_default_scope(self):
         scope = []
         return scope
+
+    def get_auth_params(self, request, action):
+        ret = super(FlickrProvider, self).get_auth_params(request,
+                                                          action)
+        if 'perms' not in ret:
+            ret['perms'] = 'read'
+        return ret
 
     def get_profile_fields(self):
         default_fields = ['id',
@@ -43,9 +57,12 @@ class FlickrProvider(OAuthProvider):
         return data['person']['nsid']
 
     def extract_common_fields(self, data):
-        name = data.get('person').get('realname').get('_content')
+        person = data.get('person', {})
+        name = person.get('realname', {}).get('_content')
+        username = person.get('username', {}).get('_content')
         return dict(email=data.get('email-address'),
-                    name=name)
+                    name=name,
+                    username=username)
 
 
 providers.registry.register(FlickrProvider)

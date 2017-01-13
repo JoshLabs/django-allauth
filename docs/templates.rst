@@ -51,7 +51,7 @@ indicates how to process the social login. You can choose between
 
 Furthermore, you can pass along an `action` parameter with value
 `reauthenticate` to indicate that you want the user to be re-prompted
-for authentication even if he already signed in before. For now, this
+for authentication even if they already signed in before. For now, this
 is supported by Facebook, Google and Twitter only.
 
 For Javascript based logins (e.g. when you enable the Facebook JS
@@ -70,3 +70,14 @@ Then::
     {{accounts.twitter}} -- a list of connected Twitter accounts
     {{accounts.twitter.0}} -- the first Twitter account
     {% if accounts %} -- if there is at least one social account
+
+
+Finally, social authentication providers configured for the current site
+can be retrieved via::
+
+    {% get_providers as socialaccount_providers %}
+
+Which will populate the ``socialaccount_providers`` variable in the
+template context with a list of configured social authentication
+providers. This supersedes the context processor used in version 0.21 and
+below.

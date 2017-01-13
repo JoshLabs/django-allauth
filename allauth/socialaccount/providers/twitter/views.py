@@ -1,5 +1,6 @@
 import json
 
+from allauth.socialaccount.app_settings import QUERY_EMAIL
 from allauth.socialaccount.providers.oauth.client import OAuth
 from allauth.socialaccount.providers.oauth.views import (OAuthAdapter,
                                                          OAuthLoginView,
@@ -12,7 +13,8 @@ class TwitterAPI(OAuth):
     """
     Verifying twitter credentials
     """
-    url = 'https://api.twitter.com/1.1/account/verify_credentials.json'
+    _base_url = 'https://api.twitter.com/1.1/account/verify_credentials.json'
+    url = _base_url + '?include_email=true' if QUERY_EMAIL else _base_url
 
     def get_user_info(self):
         user = json.loads(self.query(self.url))
@@ -27,7 +29,7 @@ class TwitterOAuthAdapter(OAuthAdapter):
     # authorize_url = 'https://api.twitter.com/oauth/authorize'
     authorize_url = 'https://api.twitter.com/oauth/authenticate'
 
-    def complete_login(self, request, app, token):
+    def complete_login(self, request, app, token, response):
         client = TwitterAPI(request, app.client_id, app.secret,
                             self.request_token_url)
         extra_data = client.get_user_info()

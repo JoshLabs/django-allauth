@@ -28,16 +28,26 @@ Custom User Models
 If you use a custom user model you need to specify what field
 represents the `username`, if any. Here, `username` really refers to
 the field representing the nick name the user uses to login, and not
-some unique identifier (possibly including an e-mail adddress) as is
+some unique identifier (possibly including an e-mail address) as is
 the case for Django's `AbstractBaseUser.USERNAME_FIELD`.
 
 Meaning, if your custom user model does not have a `username` field
 (again, not to be mistaken with an e-mail address or user id), you
 will need to set `ACCOUNT_USER_MODEL_USERNAME_FIELD` to `None`. This
-will disable username related functionality in `allauth`.
+will disable username related functionality in `allauth`. Remember to
+also to set `ACCOUNT_USERNAME_REQUIRED` to `False`.
 
 Similarly, you will need to set `ACCOUNT_USER_MODEL_EMAIL_FIELD` to
 `None`, or the proper field (if other than `email`).
+
+For example, if you want to use a custom user model that has `email`
+as the identifying field, and you don't want to collect usernames, you
+need the following in your settings.py::
+
+    ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+    ACCOUNT_EMAIL_REQUIRED = True
+    ACCOUNT_USERNAME_REQUIRED = False
+    ACCOUNT_AUTHENTICATION_METHOD = 'email'
 
 
 Creating and Populating User instances
@@ -48,15 +58,32 @@ instances are created, and populated with data
 
 - `allauth.account.adapter.DefaultAccountAdapter`:
 
+  - `is_open_for_signup(self, request)`: The default function
+  returns `True`. You can override this method by returning `False`
+  if you want to disable account signup.
+
   - `new_user(self, request)`: Instantiates a new, empty `User`.
 
   - `save_user(self, request, user, form)`: Populates and saves the
     `User` instance using information provided in the signup form.
 
+  - `populate_username(self, request, user)`:
+    Fills in a valid username, if required and missing.  If the
+    username is already present it is assumed to be valid (unique).
+
   - `confirm_email(self, request, email_address)`: Marks the email address as
     confirmed and saves to the db.
 
+  - `generate_unique_username(self, txts, regex=None)`: Returns a unique username
+    from the combination of strings present in txts iterable. A regex pattern
+    can be passed to the method to make sure the generated username matches it.
+
 - `allauth.socialaccount.adapter.DefaultSocialAccountAdapter`:
+
+  - `is_open_for_signup(self, request)`: The default function
+  returns that is the same as `ACCOUNT_ADAPTER` in `settings.py`.
+  You can override this method by returning `True`/`False`
+  if you want to enable/disable socialaccount signup.
 
   - `new_user(self, request, sociallogin)`: Instantiates a new, empty
     `User`.
@@ -111,6 +138,10 @@ template as follows::
 
     account/email/email_confirmation_message.html
 
+The project does not contain any HTML email templates out of the box.
+When you do provide these yourself, note that both the text and HTML
+versions of the message are sent.
+
 If this does not suit your needs, you can hook up your own custom
 mechanism by overriding the `send_mail` method of the account adapter
 (`allauth.account.adapter.DefaultAccountAdapter`).
@@ -159,3 +190,31 @@ it is listed in `settings.INSTALLED_APPS`.  All messages (as in
 `django.contrib.messages`) are configurable by overriding their
 respective template. If you want to disable a message simply override
 the message template with a blank one.
+
+Admin
+-----
+
+The Django admin site (`django.contrib.admin`) does not use Django allauth by
+default. Since Django admin provides a custom login view, it does not go through
+the normal Django allauth workflow.
+
+.. warning::
+
+    This limitation means that Django allauth features are not applied to the
+    Django admin site:
+
+    * `ACCOUNT_LOGIN_ATTEMPTS_LIMIT` and `ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT` do not
+      protect Django’s admin login from being brute forced.
+    * Any other custom workflow that overrides the Django allauth adapter's
+      login method will not be applied.
+
+An easy workaround for this is to require users to login before going to the
+Django admin site's login page (note that following would need to be applied to
+every instance of `AdminSite`):
+
+.. code-block:: python
+
+    from django.contrib import admin
+    from django.contrib.auth.decorators import login_required
+
+    admin.site.login = login_required(admin.site.login)

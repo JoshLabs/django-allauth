@@ -6,7 +6,6 @@ from requests import RequestException
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseRedirect
 from django.utils import timezone
-from allauth.socialaccount.adapter import get_adapter
 
 from allauth.compat import reverse
 from allauth.exceptions import ImmediateHttpResponse
@@ -45,7 +44,15 @@ class OAuth2Adapter(object):
         raise NotImplementedError
 
     def get_callback_url(self, request, app):
-        callback_url = reverse(self.provider_id + "_callback")
+
+        if request.GET.get('process', '').strip() == 'import':
+            callback_url = self.get_import_callback_url(request, app)
+        else:
+            # If adapter has it's own callback url, use that.
+            if hasattr(self, 'get_login_callback_url'):
+                callback_url = self.get_login_callback_url(request, self.get_provider())
+            else:
+                callback_url = reverse(self.provider_id + "_callback")
         protocol = self.redirect_uri_protocol
         return build_absolute_uri(request, callback_url, protocol)
 
@@ -73,21 +80,7 @@ class OAuth2View(object):
         return view
 
     def get_client(self, request, app):
-
-        if request.GET.get('process', '').strip() == 'import':
-            callback_url = self.adapter.get_import_callback_url(request, app)
-        else:
-            # If adapter has it's own callback url, use that.
-            if hasattr(self.adapter, 'get_login_callback_url'):
-                callback_url = self.adapter.get_login_callback_url(request, self.adapter.get_provider())
-            else:
-                callback_url = reverse(self.adapter.provider_id + "_callback")
-        protocol = (self.adapter.redirect_uri_protocol
-                    or app_settings.DEFAULT_HTTP_PROTOCOL)
-        callback_url = build_absolute_uri(
-            request, callback_url,
-            protocol=protocol)
-
+        callback_url = self.adapter.get_callback_url(request, app)
         provider = self.adapter.get_provider()
         scope = provider.get_scope(request)
         client = OAuth2Client(self.request, app.client_id, app.secret,

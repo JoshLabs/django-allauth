@@ -1,9 +1,11 @@
 import requests
 
-from allauth.socialaccount.providers.oauth2.views import (OAuth2Adapter,
-                                                          OAuth2LoginView,
-                                                          OAuth2CallbackView)
 from allauth.socialaccount.providers.oauth2.client import OAuth2Error
+from allauth.socialaccount.providers.oauth2.views import (
+    OAuth2Adapter,
+    OAuth2CallbackView,
+    OAuth2LoginView,
+)
 
 from .provider import SlackProvider
 
@@ -31,13 +33,7 @@ class SlackOAuth2Adapter(OAuth2Adapter):
         if not resp.get('ok'):
             raise OAuth2Error()
 
-        # Fill in their generic info
-        info = {
-            'user': resp.get('user'),
-            'team': resp.get('team')
-        }
-
-        return info
+        return resp
 
 
 oauth2_login = OAuth2LoginView.adapter_view(SlackOAuth2Adapter)

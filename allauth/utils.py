@@ -1,27 +1,29 @@
-import random
-import string
 import base64
-import re
-import unicodedata
+import importlib
 import json
+import random
+import re
+import string
+import unicodedata
 from collections import OrderedDict
 
-from django.core.exceptions import ImproperlyConfigured
-from django.core.validators import validate_email, ValidationError
+from django.contrib.auth import get_user_model
 from django.contrib.sites.models import Site
-from django.db.models import FieldDoesNotExist, FileField
-from django.db.models.fields import (DateTimeField, DateField,
-                                     EmailField, TimeField,
-                                     BinaryField)
-from django.utils import six, dateparse
-from django.utils.six.moves.urllib.parse import urlsplit
-
+from django.core.exceptions import ImproperlyConfigured
 from django.core.serializers.json import DjangoJSONEncoder
-try:
-    from django.utils.encoding import force_text, force_bytes
-except ImportError:
-    from django.utils.encoding import force_unicode as force_text
-from allauth.compat import importlib, reverse, NoReverseMatch
+from django.core.validators import ValidationError, validate_email
+from django.db.models import FieldDoesNotExist, FileField
+from django.db.models.fields import (
+    BinaryField,
+    DateField,
+    DateTimeField,
+    EmailField,
+    TimeField,
+)
+from django.utils import dateparse
+from django.utils.encoding import force_bytes
+
+from allauth.compat import force_str, six, urlsplit
 
 
 # Magic number 7: if you run into collisions with this number, then you are
@@ -36,13 +38,13 @@ def _generate_unique_username_base(txts, regex=None):
     from .account.adapter import get_adapter
     adapter = get_adapter()
     username = None
-    regex = regex or '[^\w\s@+.-]'
+    regex = regex or r'[^\w\s@+.-]'
     for txt in txts:
         if not txt:
             continue
-        username = unicodedata.normalize('NFKD', force_text(txt))
+        username = unicodedata.normalize('NFKD', force_str(txt))
         username = username.encode('ascii', 'ignore').decode('ascii')
-        username = force_text(re.sub(regex, '', username).lower())
+        username = force_str(re.sub(regex, '', username).lower())
         # Django allows for '@' in usernames in order to accomodate for
         # project wanting to use e-mail for username. In allauth we don't
         # use this, we already have a proper place for putting e-mail
@@ -50,7 +52,7 @@ def _generate_unique_username_base(txts, regex=None):
         # address and only take the part leading up to the '@'.
         username = username.split('@')[0]
         username = username.strip()
-        username = re.sub('\s+', '_', username)
+        username = re.sub(r'\s+', '_', username)
         # Finally, validating base username without database lookups etc.
         try:
             username = adapter.clean_username(username, shallow=True)
@@ -79,11 +81,16 @@ def generate_username_candidate(basename, suffix_length):
 
 
 def generate_username_candidates(basename):
-    ret = [basename]
+    from .account.app_settings import USERNAME_MIN_LENGTH
+    if len(basename) >= USERNAME_MIN_LENGTH:
+        ret = [basename]
+    else:
+        ret = []
+    min_suffix_length = max(1, USERNAME_MIN_LENGTH - len(basename))
     max_suffix_length = min(
         get_username_max_length(),
         MAX_USERNAME_SUFFIX_LENGTH)
-    for suffix_length in range(2, max_suffix_length):
+    for suffix_length in range(min_suffix_length, max_suffix_length):
         ret.append(generate_username_candidate(basename, suffix_length))
     return ret
 
@@ -96,10 +103,11 @@ def generate_unique_username(txts, regex=None):
     adapter = get_adapter()
     basename = _generate_unique_username_base(txts, regex)
     candidates = generate_username_candidates(basename)
-    existing_users = filter_users_by_username(*candidates).values_list(
+    existing_usernames = filter_users_by_username(*candidates).values_list(
         USER_MODEL_USERNAME_FIELD, flat=True)
+    existing_usernames = set([n.lower() for n in existing_usernames])
     for candidate in candidates:
-        if candidate not in existing_users:
+        if candidate.lower() not in existing_usernames:
             try:
                 return adapter.clean_username(candidate, shallow=True)
             except ValidationError:
@@ -134,7 +142,7 @@ def email_address_exists(email, exclude_user=None):
             users = get_user_model().objects
             if exclude_user:
                 users = users.exclude(pk=exclude_user.pk)
-            ret = users.filter(**{email_field+'__iexact': email}).exists()
+            ret = users.filter(**{email_field + '__iexact': email}).exists()
     return ret
 
 
@@ -151,57 +159,6 @@ def import_callable(path_or_callable):
     else:
         ret = path_or_callable
     return ret
-
-
-try:
-    from django.contrib.auth import get_user_model
-except ImportError:
-    # To keep compatibility with Django 1.4
-    def get_user_model():
-        from . import app_settings
-        from django.db.models import get_model
-
-        try:
-            app_label, model_name = app_settings.USER_MODEL.split('.')
-        except ValueError:
-            raise ImproperlyConfigured("AUTH_USER_MODEL must be of the"
-                                       " form 'app_label.model_name'")
-        user_model = get_model(app_label, model_name)
-        if user_model is None:
-            raise ImproperlyConfigured("AUTH_USER_MODEL refers to model"
-                                       " '%s' that has not been installed"
-                                       % app_settings.USER_MODEL)
-        return user_model
-
-
-def get_current_site(request=None):
-    """Wrapper around ``Site.objects.get_current`` to handle ``Site`` lookups
-    by request in Django >= 1.8.
-
-    :param request: optional request object
-    :type request: :class:`django.http.HttpRequest`
-    """
-    # >= django 1.8
-    if request and hasattr(Site.objects, '_get_site_by_request'):
-        site = Site.objects.get_current(request=request)
-    else:
-        site = Site.objects.get_current()
-
-    return site
-
-
-def resolve_url(to):
-    """
-    Subset of django.shortcuts.resolve_url (that one is 1.5+)
-    """
-    try:
-        return reverse(to)
-    except NoReverseMatch:
-        # If this doesn't "feel" like a URL, re-raise.
-        if '/' not in to and '.' not in to:
-            raise
-    # Finally, fall back and assume it's a URL
-    return to
 
 
 SERIALIZED_DB_FIELD_PREFIX = '_db_'
@@ -222,7 +179,7 @@ def serialize_instance(instance):
         try:
             field = instance._meta.get_field(k)
             if isinstance(field, BinaryField):
-                v = force_text(base64.b64encode(v))
+                v = force_str(base64.b64encode(v))
             elif isinstance(field, FileField):
                 if v and not isinstance(v, six.string_types):
                     v = v.name
@@ -264,7 +221,7 @@ def deserialize_instance(model, data):
                         # This is quite an ugly hack, but will cover most
                         # use cases...
                         v = f.from_db_value(v, None, None, None)
-                    except:
+                    except Exception:
                         raise ImproperlyConfigured(
                             "Unable to auto serialize field '{}', custom"
                             " serialization override required".format(k)
@@ -275,11 +232,28 @@ def deserialize_instance(model, data):
     return ret
 
 
-def set_form_field_order(form, fields_order):
-    assert isinstance(form.fields, OrderedDict)
-    form.fields = OrderedDict(
-        (f, form.fields[f])
-        for f in fields_order)
+def set_form_field_order(form, field_order):
+    """
+    This function is a verbatim copy of django.forms.Form.order_fields() to
+    support field ordering below Django 1.9.
+
+    field_order is a list of field names specifying the order. Append fields
+    not included in the list in the default order for backward compatibility
+    with subclasses not overriding field_order. If field_order is None, keep
+    all fields in the order defined in the class. Ignore unknown fields in
+    field_order to allow disabling fields in form subclasses without
+    redefining ordering.
+    """
+    if field_order is None:
+        return
+    fields = OrderedDict()
+    for key in field_order:
+        try:
+            fields[key] = form.fields.pop(key)
+        except KeyError:  # ignore unknown fields
+            pass
+    fields.update(form.fields)  # add remaining fields in original order
+    form.fields = fields
 
 
 def build_absolute_uri(request, location, protocol=None):
@@ -291,7 +265,7 @@ def build_absolute_uri(request, location, protocol=None):
     from .account import app_settings as account_settings
 
     if request is None:
-        site = get_current_site()
+        site = Site.objects.get_current()
         bits = urlsplit(location)
         if not (bits.scheme and bits.netloc):
             uri = '{proto}://{domain}{url}'.format(

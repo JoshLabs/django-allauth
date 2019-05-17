@@ -1,4 +1,4 @@
-from allauth.socialaccount import providers
+from allauth.account.models import EmailAddress
 from allauth.socialaccount.providers.base import ProviderAccount
 from allauth.socialaccount.providers.oauth2.provider import OAuth2Provider
 
@@ -27,5 +27,14 @@ class DiscordProvider(OAuth2Provider):
     def get_default_scope(self):
         return ['email', 'identify']
 
+    def extract_email_addresses(self, data):
+        ret = []
+        email = data.get('email')
+        if email and data.get('verified'):
+            ret.append(EmailAddress(email=email,
+                       verified=True,
+                       primary=True))
+        return ret
 
-providers.registry.register(DiscordProvider)
+
+provider_classes = [DiscordProvider]

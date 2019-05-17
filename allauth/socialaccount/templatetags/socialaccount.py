@@ -1,18 +1,11 @@
+from django import template
 from django.template.defaulttags import token_kwargs
-from django import template, VERSION as DJANGO_VERSION
 
 from allauth.socialaccount import providers
 from allauth.utils import get_request_param
-from allauth.compat import template_context_value
 
 
 register = template.Library()
-
-
-if DJANGO_VERSION < (1, 9):
-    simple_tag = register.assignment_tag
-else:
-    simple_tag = register.simple_tag
 
 
 class ProviderLoginURLNode(template.Node):
@@ -22,16 +15,16 @@ class ProviderLoginURLNode(template.Node):
 
     def render(self, context):
         provider_id = self.provider_id_var.resolve(context)
-        request = template_context_value(context, 'request')
+        request = context['request']
         provider = providers.registry.by_id(provider_id, request)
         query = dict([(str(name), var.resolve(context)) for name, var
                       in self.params.items()])
         auth_params = query.get('auth_params', None)
         scope = query.get('scope', None)
         process = query.get('process', None)
-        if scope is '':
+        if scope == '':
             del query['scope']
-        if auth_params is '':
+        if auth_params == '':
             del query['auth_params']
         if 'next' not in query:
             next = get_request_param(request, 'next')
@@ -60,7 +53,7 @@ def provider_login_url(parser, token):
 
 class ProvidersMediaJSNode(template.Node):
     def render(self, context):
-        request = template_context_value(context, 'request')
+        request = context['request']
         ret = '\n'.join([p.media_js(request)
                          for p in providers.registry.get_list(request)])
         return ret
@@ -71,7 +64,7 @@ def providers_media_js(parser, token):
     return ProvidersMediaJSNode()
 
 
-@simple_tag
+@register.simple_tag
 def get_social_accounts(user):
     """
     {% get_social_accounts user as accounts %}
@@ -88,7 +81,7 @@ def get_social_accounts(user):
     return accounts
 
 
-@simple_tag
+@register.simple_tag
 def get_providers():
     """
     Returns a list of social authentication providers.

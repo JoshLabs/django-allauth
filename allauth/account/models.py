@@ -3,20 +3,17 @@ from __future__ import unicode_literals
 import datetime
 
 from django.core import signing
-from django.db import models
-from django.db import transaction
-from django.utils.translation import ugettext_lazy as _
+from django.db import models, transaction
 from django.utils import timezone
-from django.utils.encoding import python_2_unicode_compatible
 from django.utils.crypto import get_random_string
 
-from .. import app_settings as allauth_app_settings
-from . import app_settings
-from . import signals
+from allauth.compat import python_2_unicode_compatible, ugettext_lazy as _
 
-from .utils import user_email
-from .managers import EmailAddressManager, EmailConfirmationManager
+from .. import app_settings as allauth_app_settings
+from . import app_settings, signals
 from .adapter import get_adapter
+from .managers import EmailAddressManager, EmailConfirmationManager
+from .utils import user_email
 
 
 @python_2_unicode_compatible
@@ -67,12 +64,7 @@ class EmailAddress(models.Model):
         """
         Given a new email address, change self and re-confirm.
         """
-        try:
-            atomic_transaction = transaction.atomic
-        except AttributeError:
-            atomic_transaction = transaction.commit_on_success
-
-        with atomic_transaction():
+        with transaction.atomic():
             user_email(self.user, new_email)
             self.user.save()
             self.email = new_email

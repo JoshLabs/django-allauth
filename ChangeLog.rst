@@ -1,3 +1,246 @@
+0.39.2 (unreleased)
+*******************
+
+Note worthy changes
+-------------------
+
+- The ``instagram`` provider now extracts the user's full name.
+- New provider: NextCloud (OAuth2)
+
+
+0.39.1 (2019-02-28)
+*******************
+
+Note worthy changes
+-------------------
+
+- The ``linkedin_oauth2`` provider now gracefully deals with old V1
+  data that might still be present in ``SocialAccount.extra_data``.
+
+Backwards incompatible changes
+------------------------------
+
+- The ``globus`` provider's ``extract_uid`` now uses the openid
+  required field ``sub`` instead of the ``create_time`` field.
+
+
+0.39.0 (2019-02-26)
+*******************
+
+Note worthy changes
+-------------------
+
+- New providers: JupyterHub (OAuth2), Steam (OpenID)
+
+- Refactor translations: Portuguese (Portugal).
+
+- Add testing for Django 2.2 (no code changes required)
+
+Backwards incompatible changes
+------------------------------
+
+- ``linkedin_oauth2``: As the LinkedIn V1 API is deprecated, the user info
+  endpoint has been moved over to use the API V2. The format of the user
+  ``extra_data`` is different and the profile picture is absent by default.
+
+
+0.38.0 (2018-10-03)
+*******************
+
+Security notice
+---------------
+
+The ``{% user_display user %}`` tag did not escape properly. Depending on the
+username validation rules, this could lead to XSS issues.
+
+
+Note worthy changes
+-------------------
+
+- New provider: Vimeo (OAuth2).
+
+- New translations: Basque.
+
+
+0.37.1 (2018-08-27)
+*******************
+
+Backwards incompatible changes
+------------------------------
+
+- Dropped the ``x-li-src: msdk`` headers from the ``linkedin_oauth2`` handshake.
+  This header is only required for mobile tokens, and breaks the regular flow.
+  Use the ``HEADERS`` setting to add this header if you need it.
+
+
+0.37.0 (2018-08-27)
+*******************
+
+Note worthy changes
+-------------------
+
+- The Battle.net login backend now recognizes ``apac`` as a valid region.
+
+- User model using a ``UUIDField`` as it's primary key can now be logged
+  in upon email confirmation (if using ``ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION``).
+
+- New providers: Agave, Cern, Disqus, Globus.
+
+- New translation: Danish.
+
+0.36.0 (2018-05-08)
+*******************
+
+Note worthy changes
+-------------------
+
+- New providers: Telegram, QuickBooks.
+
+- The Facebook API version now defaults to v2.12.
+
+- ORCID upgraded to use API v2.1.
+
+
+Security notice
+---------------
+
+- In previous versions, the authentication backend did not invoke the
+  ``user_can_authenticate()`` method, potentially allowing users with
+  ``is_active=False`` to authenticate when the allauth authentication backend
+  was used in a non allauth context.
+
+
+0.35.0 (2018-02-02)
+*******************
+
+Note worthy changes
+-------------------
+
+- Add support for Django 2.0
+
+Security notice
+---------------
+
+- As an extra security measure on top of what the standard Django password reset
+  token generator is already facilitating, allauth now adds the user email
+  address to the hash such that whenever the user's email address changes the
+  token is invalidated.
+
+Backwards incompatible changes
+------------------------------
+
+- Drop support for Django 1.8 and Django 1.10.
+
+
+Note worthy changes
+-------------------
+
+- New provider: Azure, Microsoft Graph, Salesforce, Yahoo.
+
+
+0.34.0 (2017-10-29)
+*******************
+
+Security notice
+---------------
+
+- The "Set Password" view did not properly check whether or not the user already
+  had a usable password set. This allowed an attacker to set the password
+  without providing the current password, but only in case the attacker already
+  gained control over the victim's session.
+
+
+Note worthy changes
+-------------------
+
+- New provider: Meetup.
+
+
+0.33.0 (2017-08-20)
+*******************
+
+Note worthy changes
+-------------------
+
+- Security: password reset tokens are now prevented from being leaked through
+  the password reset URL.
+
+- New providers: Patreon, Authentiq, Dataporten.
+
+- Dropbox has been upgraded to API V2.
+
+- New translation: Norwegian.
+
+
+Backwards incompatible changes
+------------------------------
+
+- Dropped support for Django 1.9.
+
+
+0.32.0 (2017-04-27)
+*******************
+
+Note worthy changes
+-------------------
+
+- Improved AJAX support: the account management views (change/set password,
+  manage e-mail addresses and social connections) now support AJAX GET requests.
+  These views hand over all the required data for you to build your frontend
+  application upon.
+
+- New providers: Dwolla, Trello.
+
+- Shopify: support for per-user access mode.
+
+
+Backwards incompatible changes
+------------------------------
+
+- In previous versions, the views only responded with JSON responses when
+  issuing AJAX requests of type POST. Now, the views also respond in JSON when
+  making AJAX GET requests.
+
+- The structure of the response for AJAX requests has changed. Previously, it
+  contained a ``form_errors`` key containing all form validation errors, if any.
+  Now, it contains a ``form`` key that describes the complete form, including
+  the fields. Field specific errors are placed in
+  ``form.fields['some_field'].errors``, non-field errors in ``form.errors``.
+
+- The parameters passed to the Facebook JS SDK ``FB.init()`` method used to contain
+  ``cookie``, ``status``, and ``xfbml``, all set to ``true``. These parameters
+  are no longer explicitly passed. You can use the newly introduced ``INIT_PARAMS``
+  provider setting to provide your own values.
+
+
+
+0.31.0 (2017-02-28)
+*******************
+
+Note worthy changes
+-------------------
+
+- Added a new ``user_logged_out`` signal.
+
+- OpenId: Added support for requesting additional data.
+
+- New providers: Auth0, Box, Line, Naver, Kakao, Daum, MailChimp, Eventbrite.
+
+
+Backwards incompatible changes
+------------------------------
+
+- Django 1.7 / Python 3.2 compatibility has been dropped.
+
+- Due to providers being registered in the same file as their definition
+  it was impossible to subclass a provider without having the parent be
+  registered. This has been addressed. If you have implemented a custom
+  provider, you will need to change
+  ``providers.registry.register(CustomProvider)``
+  into
+  ``provider_classes = [CustomProvider]``.
+
+
 0.30.0 (2017-01-01)
 *******************
 
@@ -907,7 +1150,7 @@ Backwards incompatible changes
   social login to existing accounts. The symptom is you end up with
   users who have multiple primary email addresses which conflicts
   with assumptions made by the code. In addition to fixing the code
-  that allowed duplicates to occur, there is a managegement command
+  that allowed duplicates to occur, there is a management command
   you can run if you think this effects you (and if it doesn't effect
   you there is no harm in running it anyways if you are unsure):
 

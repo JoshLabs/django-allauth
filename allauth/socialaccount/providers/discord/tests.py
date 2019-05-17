@@ -1,7 +1,6 @@
 from allauth.socialaccount.providers.discord.provider import DiscordProvider
 from allauth.socialaccount.tests import OAuth2TestsMixin
-from allauth.tests import MockedResponse
-from allauth.tests import TestCase
+from allauth.tests import MockedResponse, TestCase
 
 
 class DiscordTests(OAuth2TestsMixin, TestCase):
@@ -14,5 +13,5 @@ class DiscordTests(OAuth2TestsMixin, TestCase):
             "discriminator": "1337",
             "avatar": "8342729096ea3675442027381ff50dfe",
             "verified": true,
-            "email": "nelly@discordapp.com"
+            "email": "nelly@example.com"
         }""")

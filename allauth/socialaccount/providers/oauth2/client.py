@@ -1,9 +1,8 @@
-try:
-    from urllib.parse import parse_qsl, urlencode
-except ImportError:
-    from urllib import urlencode
-    from urlparse import parse_qsl
 import requests
+
+from django.utils.http import urlencode
+
+from allauth.compat import parse_qsl
 
 
 class OAuth2Error(Exception):
@@ -74,7 +73,7 @@ class OAuth2Client(object):
             auth=auth)
 
         access_token = None
-        if resp.status_code == 200:
+        if resp.status_code in [200, 201]:
             # Weibo sends json via 'text/plain;charset=UTF-8'
             if (resp.headers['content-type'].split(
                     ';')[0] == 'application/json' or resp.text[:2] == '{"'):

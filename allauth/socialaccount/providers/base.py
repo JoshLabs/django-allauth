@@ -1,8 +1,8 @@
-from django.utils.encoding import python_2_unicode_compatible
-
-from allauth.socialaccount import app_settings
 from allauth.account.models import EmailAddress
 from django.contrib.sites.models import Site
+from allauth.compat import python_2_unicode_compatible
+from allauth.socialaccount import app_settings
+
 from ..adapter import get_adapter
 
 
@@ -153,7 +153,7 @@ class Provider(object):
         """
         For example:
 
-        [EmailAddress(email='john@doe.org',
+        [EmailAddress(email='john@example.com',
                       verified=True,
                       primary=True)]
         """

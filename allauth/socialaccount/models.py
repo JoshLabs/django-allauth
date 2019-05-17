@@ -1,27 +1,26 @@
 from __future__ import absolute_import
 
-from django.core.exceptions import PermissionDenied
-from django.db import models
 from django.contrib.auth import authenticate
 from django.contrib.sites.models import Site
-from django.utils.encoding import python_2_unicode_compatible
+from django.contrib.sites.shortcuts import get_current_site
+from django.core.exceptions import PermissionDenied
+from django.db import models
 from django.utils.crypto import get_random_string
-from django.utils.translation import ugettext_lazy as _
-try:
-    from django.utils.encoding import force_text
-except ImportError:
-    from django.utils.encoding import force_unicode as force_text
 
 import allauth.app_settings
 from allauth.account.models import EmailAddress
 from allauth.account.utils import get_next_redirect_url, setup_user_email
-from allauth.utils import (get_user_model, get_current_site)
+from allauth.compat import (
+    force_str,
+    python_2_unicode_compatible,
+    ugettext_lazy as _,
+)
+from allauth.utils import get_user_model
 
-from .adapter import get_adapter
-from . import app_settings
-from . import providers
-from .fields import JSONField
 from ..utils import get_request_param
+from . import app_settings, providers
+from .adapter import get_adapter
+from .fields import JSONField
 
 
 class SocialAppManager(models.Manager):
@@ -114,7 +113,7 @@ class SocialAccount(models.Model):
         return authenticate(account=self)
 
     def __str__(self):
-        return force_text(self.user)
+        return force_str(self.user)
 
     def get_profile_url(self):
         return self.get_provider_account().get_profile_url()
@@ -218,7 +217,7 @@ class SocialLogin(object):
         for ea in data['email_addresses']:
             email_address = deserialize_instance(EmailAddress, ea)
             email_addresses.append(email_address)
-        ret = SocialLogin()
+        ret = cls()
         ret.token = token
         ret.account = account
         ret.user = user

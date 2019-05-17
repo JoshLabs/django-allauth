@@ -1,4 +1,3 @@
-from allauth.socialaccount import providers
 from allauth.socialaccount.providers.base import ProviderAccount
 from allauth.socialaccount.providers.oauth2.provider import OAuth2Provider
 
@@ -25,12 +24,12 @@ class SlackProvider(OAuth2Provider):
                           str(data.get('user').get('id')))
 
     def extract_common_fields(self, data):
-        return dict(name=data.get('name'),
-                    email=data.get('user').get('email', None))
+        user = data.get('user', {})
+        return {'name': user.get('name'),
+                'email': user.get('email', None)}
 
     def get_default_scope(self):
-        return ['identity.basic', 'identity.email',
-                'identity.avatar', 'identity.team']
+        return ['identify']
 
 
-providers.registry.register(SlackProvider)
+provider_classes = [SlackProvider]
